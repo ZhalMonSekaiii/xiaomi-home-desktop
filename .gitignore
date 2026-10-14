@@ -1,0 +1,11 @@
+# credentials, LAN tokens, cached specs - never commit
+data/
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+*.spec
+
+# local tooling
+.claude/

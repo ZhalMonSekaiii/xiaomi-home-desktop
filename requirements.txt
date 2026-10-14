@@ -1,0 +1,6 @@
+requests>=2.31
+cryptography>=42
+fastapi>=0.110
+uvicorn>=0.27
+pywebview>=5
+# build only: pyinstaller>=6

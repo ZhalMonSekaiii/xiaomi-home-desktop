@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XHome</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #f3f4f6; --panel: #ffffff; --panel-2: #f8f9fb; --text: #15181d; --muted: #6b7280;
+    --line: #e4e6ea; --accent: #ff6900; --accent-ink: #ffffff; --accent-soft: rgba(255,105,0,.12);
+    --ok: #16a34a; --err: #dc2626; --chip: #eef0f3; --cool: #0284c7;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 24px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1014; --panel: #161920; --panel-2: #1c2028; --text: #e7e9ec; --muted: #98a1ab;
+      --line: #282d37; --chip: #222731; --accent-soft: rgba(255,105,0,.18); --cool: #38bdf8; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+         -webkit-user-select: none; user-select: none; }
+  input, pre, .meta { -webkit-user-select: text; user-select: text; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  header { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: var(--panel);
+           border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .brand { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .brand img { width: 22px; height: 22px; }
+  .spacer { flex: 1; }
+  .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
+  .btn:hover { background: var(--panel-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn:disabled { opacity: .5; cursor: progress; }
+  .pill { background: var(--chip); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .pill.ok { color: var(--ok); } .pill.err { color: var(--err); }
+  select, input[type=text] { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1280px; margin: 0 auto; }
+  nav { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 6px; align-self: start;
+        position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow: auto; box-shadow: var(--shadow); }
+  .room { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 10px 4px; }
+  .dev { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 10px; cursor: pointer; }
+  .dev:hover { background: var(--panel-2); }
+  .dev.active { background: var(--accent-soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--ok); }
+  .dev .n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dev .m { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--chip); color: var(--muted); margin-left: 4px; }
+  .tag.lan { color: var(--ok); }
+
+  main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .empty { padding: 56px 24px; text-align: center; color: var(--muted); }
+  .head { padding: 14px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .head h1 { margin: 0; font-size: 18px; line-height: 1.25; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); padding: 5px 12px; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+
+  /* ---------- AC remote ---------- */
+  .remote { padding: 20px; display: grid; gap: 20px; }
+  .remote-top { display: flex; align-items: flex-start; gap: 16px; }
+  .readouts { display: flex; gap: 22px; flex-wrap: wrap; flex: 1; }
+  .ro span { display: block; font-size: 12px; color: var(--muted); }
+  .ro b { font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .power { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--chip); color: var(--muted);
+           display: grid; place-items: center; align-content: center; gap: 2px; flex: none; transition: .15s; }
+  .power svg { width: 26px; height: 26px; }
+  .power span { font-size: 11px; font-weight: 600; }
+  .is-on .power { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 6px 20px rgba(255,105,0,.35); }
+  .temp { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 6px 0; }
+  .round { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); font-size: 26px; line-height: 1; }
+  .round:hover { border-color: var(--accent); color: var(--accent); }
+  .temp-val { text-align: center; min-width: 180px; }
+  .temp-val b { font-size: 68px; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .temp-val span { font-size: 24px; color: var(--muted); vertical-align: top; margin-left: 2px; }
+  .temp-val small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .is-on .temp-val b { color: var(--cool); }
+  .group > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 14px; min-width: 44px; }
+  .chip-btn:hover { border-color: var(--accent); }
+  .chip-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .toggles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .tog { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 10px 12px; text-align: left; }
+  .tog i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
+  .tog.on { background: var(--accent-soft); border-color: var(--accent); }
+  .tog.on i { background: var(--accent); }
+  .is-off .temp, .is-off .group, .is-off .toggles { opacity: .5; }
+  .busy { opacity: .6; }
+
+  /* ---------- all features ---------- */
+  details.card > summary { padding: 14px 16px; cursor: pointer; font-weight: 600; list-style: none; display: flex; gap: 8px; align-items: center; }
+  details.card > summary::before { content: "▸"; color: var(--muted); transition: .15s; }
+  details.card[open] > summary::before { transform: rotate(90deg); }
+  details.card > summary small { color: var(--muted); font-weight: 400; }
+  .svc { padding: 4px 16px 12px; border-top: 1px solid var(--line); }
+  .svc h2 { margin: 12px 0 4px; font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .svc h2 small { color: var(--muted); font-weight: 400; }
+  .row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(0, 1.3fr); gap: 12px; align-items: center; padding: 7px 0; border-top: 1px dashed var(--line); }
+  .row .k { font-weight: 500; } .row .k small { display: block; color: var(--muted); font-weight: 400; font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .ctl { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; min-width: 0; }
+  .val { font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+  .val.err { color: var(--err); font-size: 12px; }
+  input[type=range] { width: min(240px, 100%); accent-color: var(--accent); }
+  .switch { position: relative; width: 42px; height: 24px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; cursor: pointer; transition: .15s; }
+  .switch span::after { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(18px); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 8px; }
+  .raw { padding: 0 16px 16px; display: grid; gap: 8px; }
+  .raw .line { display: flex; gap: 8px; flex-wrap: wrap; }
+  .raw input { flex: 1; min-width: 140px; }
+  pre { margin: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow: auto; max-height: 260px; font-size: 12px; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .modal.show { display: flex; }
+  .modal .box { background: var(--panel); border-radius: 16px; padding: 20px; width: min(400px, 100%); display: grid; gap: 12px; }
+  .modal h3 { margin: 0; }
+  .modal img { width: 220px; height: 220px; margin: 0 auto; background: #fff; border-radius: 8px; }
+  #toast { position: fixed; bottom: 16px; right: 16px; display: grid; gap: 8px; z-index: 30; max-width: min(420px, calc(100vw - 32px)); }
+  .t { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--ok); padding: 10px 12px; border-radius: 8px; box-shadow: var(--shadow); }
+  .t.err { border-left-color: var(--err); }
+
+  @media (max-width: 760px) {
+    header { padding: 0 12px; gap: 6px; }
+    .hide-sm { display: none; }
+    .layout { grid-template-columns: 1fr; padding: 12px; }
+    nav { position: static; max-height: 200px; }
+    .temp { gap: 14px; } .temp-val { min-width: 130px; } .temp-val b { font-size: 54px; }
+    .row { grid-template-columns: 1fr; } .ctl, .val { justify-content: flex-start; text-align: left; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/favicon.ico" alt="">XHome</div>
+  <span id="cloudPill" class="pill hide-sm">cloud: …</span>
+  <div class="spacer"></div>
+  <button class="btn" id="btnScan" title="Find devices on this Wi-Fi network">Scan LAN</button>
+  <button class="btn" id="btnSync" title="Fetch devices + LAN tokens from your Xiaomi account">Sync</button>
+  <button class="btn hide-sm" id="btnAdd" title="Add a LAN device by IP + token">+ Manual</button>
+  <button class="btn primary" id="btnLogin">Login</button>
+</header>
+
+<div class="layout">
+  <nav id="list"><div class="empty">Loading…</div></nav>
+  <main id="detail"><section class="card empty">Pick a device on the left.</section></main>
+</div>
+
+<div class="modal" id="loginModal">
+  <div class="box">
+    <h3>Sign in to Xiaomi</h3>
+    <a class="btn primary" id="loginLink" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">Sign in with the browser</a>
+    <div class="meta" style="text-align:center">or scan this QR with your phone camera / Google Lens</div>
+    <img id="qr" alt="QR login">
+    <div id="loginMsg" class="pill" style="text-align:center">waiting for login…</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="server" title="Region server" style="flex:1"></select>
+      <button class="btn" data-close="loginModal">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="addModal">
+  <div class="box">
+    <h3>Add a LAN device</h3>
+    <input type="text" id="addIp" placeholder="IP, e.g. 192.168.1.50">
+    <input type="text" id="addToken" placeholder="32 hex character token">
+    <input type="text" id="addName" placeholder="name (optional)">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" data-close="addModal">Cancel</button>
+      <button class="btn primary" id="addGo">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } };
+const enc = encodeURIComponent;
+const POLL_MS = 5000;
+const POWER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>';
+const UNITS = { percentage: "%", celsius: "°C", kelvin: "K", seconds: "s", minutes: "min", hours: "h", days: "d", rgb: "", none: "" };
+const MODE_LABEL = { cool: "❄ Cool", dry: "💧 Dry", fan: "🌀 Fan", heat: "☀ Heat", auto: "Auto" };
+
+// AC remote: the MIoT keys it uses (only those present in the device spec are shown)
+const AC = {
+  power: "air-conditioner.on", mode: "air-conditioner.mode", target: "air-conditioner.target-temperature",
+  fan: "fan-control.fan-level", room: "environment.temperature", outdoor: "machine-state.outdoor-temp",
+  energy: "power-consumption.power-consumption",
+  toggles: [["air-conditioner.eco", "Eco"], ["air-conditioner.sleep-mode", "Sleep"], ["fan-control.vertical-swing", "Swing ↕"],
+            ["fan-control.horizontal-swing", "Swing ↔"], ["air-conditioner.dryer", "Dryer"], ["air-conditioner.max-level", "Max"],
+            ["indicator-light.on", "Display light"], ["alarm.alarm", "Beep"]],
+};
+
+const S = { devices: [], cur: null, spec: null, props: {}, values: {}, pending: {}, via: store("via") || "auto", pollingDid: null, showAll: false };
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-XHome": "1" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(data?.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : r.statusText);
+  return data;
+}
+function toast(msg, err) {
+  const el = document.createElement("div"); el.className = "t" + (err ? " err" : ""); el.textContent = msg;
+  $("#toast").append(el); setTimeout(() => el.remove(), err ? 7000 : 2500);
+}
+async function busy(btn, fn) { btn.disabled = true; try { return await fn(); } catch (e) { toast(e.message, true); } finally { btn.disabled = false; } }
+const unitTxt = p => { const u = p.unit in UNITS ? UNITS[p.unit] : (p.unit || ""); return u ? (u === "%" ? u : " " + u) : ""; };
+const val = key => S.values[key]?.code === 0 ? S.values[key].value : undefined;
+const fmt = (v, d = 1) => v === undefined || v === null ? "--" : (typeof v === "number" ? Number(v.toFixed(d)).toString() : String(v));
+for (const b of document.querySelectorAll("[data-close]")) b.onclick = () => $("#" + b.dataset.close).classList.remove("show");
+
+// ------------------------------------------------------------------ cloud / header
+async function loadState() {
+  const st = await api("/api/state");
+  const pill = $("#cloudPill");
+  pill.textContent = st.logged_in ? `cloud: connected (${st.server})` : "cloud: not logged in";
+  pill.className = "pill hide-sm " + (st.logged_in ? "ok" : "");
+  $("#btnLogin").textContent = st.logged_in ? "Logout" : "Login";
+  $("#btnLogin").classList.toggle("primary", !st.logged_in);
+  $("#server").innerHTML = Object.entries(st.servers).map(([k, v]) => `<option value="${k}" ${k === st.server ? "selected" : ""}>Server ${k} · ${esc(v)}</option>`).join("");
+  return st;
+}
+$("#server").onchange = async e => { await api("/api/server", { server: e.target.value }); await loadState(); startLogin(); };
+async function startLogin() {
+  const q = await api("/api/login/qr", {});
+  $("#loginLink").href = q.login_url;
+  $("#qr").src = "/api/login/qr.png?" + Date.now();
+  $("#loginMsg").textContent = "waiting for login…";
+  $("#loginModal").classList.add("show");
+  const poll = setInterval(async () => {
+    if (!$("#loginModal").classList.contains("show")) return clearInterval(poll);
+    const s = await api("/api/login/status").catch(() => null);
+    if (!s) return;
+    if (s.status === "syncing") $("#loginMsg").textContent = "signed in, syncing devices…";
+    if (s.status === "error") { clearInterval(poll); $("#loginMsg").textContent = "Failed: " + s.message; }
+    if (s.status === "ok") {
+      clearInterval(poll); $("#loginModal").classList.remove("show");
+      toast("Signed in · " + s.message); await loadState(); await loadDevices();
+    }
+  }, 1500);
+}
+$("#btnLogin").onclick = e => busy(e.target, async () => {
+  const st = await api("/api/state");
+  if (st.logged_in) { if (confirm("Log out of your Xiaomi account? LAN control keeps working.")) { await api("/api/logout", {}); await loadState(); } return; }
+  await startLogin();
+});
+$("#btnSync").onclick = e => busy(e.target, async () => { S.devices = await api("/api/devices/refresh", {}); renderList(); toast(`${S.devices.length} device(s) synced`); });
+$("#btnScan").onclick = e => busy(e.target, async () => {
+  const r = await api("/api/discover", {}); S.devices = r.devices; renderList();
+  const unknown = r.found.filter(f => !f.name).map(f => f.ip);
+  toast(`${r.found.length} device(s) answered on the LAN` + (unknown.length ? ` (unknown: ${unknown.join(", ")})` : ""));
+});
+$("#btnAdd").onclick = () => $("#addModal").classList.add("show");
+$("#addGo").onclick = e => busy(e.target, async () => {
+  const d = await api("/api/devices/add", { ip: $("#addIp").value, token: $("#addToken").value, name: $("#addName").value || null });
+  $("#addModal").classList.remove("show"); toast("Added: " + d.name); await loadDevices(); select(d.did);
+});
+
+// ------------------------------------------------------------------ device list
+async function loadDevices() {
+  S.devices = await api("/api/devices"); renderList();
+  const last = store("cur");
+  if (!S.cur && S.devices.length) select(S.devices.some(d => d.did === last) ? last : S.devices[0].did);
+}
+function renderList() {
+  if (!S.devices.length) { $("#list").innerHTML = `<div class="empty">No devices yet.<br>Click <b>Login</b>, then <b>Sync</b>.</div>`; return; }
+  const groups = {};
+  for (const d of S.devices) (groups[d.room_name || d.home_name || "Other"] ??= []).push(d);
+  $("#list").innerHTML = Object.entries(groups).map(([room, ds]) => `<div class="room">${esc(room)}</div>` + ds.map(d => `
+    <div class="dev ${S.cur?.did === d.did ? "active" : ""}" data-did="${esc(d.did)}">
+      <span class="dot ${d.isOnline ? "on" : ""}"></span>
+      <div style="min-width:0;flex:1"><div class="n">${esc(d.name || d.did)}</div>
+      <div class="m">${esc(d.model || "")}${d.can_local ? '<span class="tag lan">LAN</span>' : ""}${d.source === "cloud" ? '<span class="tag">cloud</span>' : ""}</div></div>
+    </div>`).join("")).join("");
+}
+$("#list").onclick = e => { const el = e.target.closest(".dev"); if (el) select(el.dataset.did); };
+
+// ------------------------------------------------------------------ device detail
+async function select(did) {
+  S.cur = S.devices.find(d => d.did === did); if (!S.cur) return;
+  store("cur", did);
+  S.spec = null; S.props = {}; S.values = {}; S.pending = {}; S.showAll = false;
+  renderList(); renderDetail();
+  try { S.spec = await api(`/api/devices/${enc(did)}/spec`); } catch (e) { toast(e.message, true); }
+  if (S.cur?.did !== did) return;
+  for (const svc of S.spec?.services || []) for (const p of svc.properties) S.props[p.key] = p;
+  renderDetail(); poll(true);
+}
+const isAC = () => !!S.props[AC.power] && !!S.props[AC.target];
+function remoteKeys() {
+  return [AC.power, AC.mode, AC.target, AC.fan, AC.room, AC.outdoor, AC.energy, ...AC.toggles.map(t => t[0])]
+    .filter(k => S.props[k]?.access.includes("read"));
+}
+
+function renderDetail() {
+  const d = S.cur; if (!d) return;
+  const vias = [["auto", "Auto"], ["local", "LAN"], ["cloud", "Cloud"]].map(([v, l]) => `<button class="${S.via === v ? "on" : ""}" data-act="via" data-via="${v}">${l}</button>`).join("");
+  let html = `<section class="card head">
+      <span class="dot ${d.isOnline ? "on" : ""}"></span>
+      <div style="flex:1;min-width:180px"><h1>${esc(d.name || d.did)}</h1>
+        <div class="meta">${d.room_name ? esc(d.room_name) + " · " : ""}${esc(d.model)} · ${esc(d.localip || "no IP")}</div></div>
+      <div class="seg" title="Connection path: Auto = LAN first, then cloud">${vias}</div>
+      <span class="pill" id="lastVia">–</span>
+    </section>`;
+  if (!S.spec) {
+    html += `<section class="card empty">${d.model ? "Loading device features…" : "Unknown model"}</section>`;
+  } else {
+    if (isAC()) html += `<div id="remote"></div>`;
+    html += `<details class="card" id="allFeatures" ${isAC() ? "" : "open"}><summary>All features <small>${Object.keys(S.props).length} properties from the MIoT spec</small></summary>`;
+    const services = [...S.spec.services].sort((a, b) => (a.name === "device-information") - (b.name === "device-information"));
+    for (const svc of services) {
+      if (!svc.properties.length && !svc.actions.length) continue;
+      html += `<div class="svc"><h2>${esc(svc.description || svc.name)} <small>${esc(svc.name)} · siid ${svc.siid}</small></h2>`;
+      html += svc.properties.map(propRow).join("");
+      if (svc.actions.length) html += `<div class="actions">` + svc.actions.map(a =>
+        `<button class="btn" data-act="action" data-key="${esc(a.key)}" data-in="${esc(JSON.stringify(a.in))}" title="${esc(a.key)}">${esc(a.description || a.key)}${a.in.length ? " …" : ""}</button>`).join("") + `</div>`;
+      html += `</div>`;
+    }
+    html += `</details>`;
+  }
+  html += `<details class="card"><summary>Raw miIO console <small>for advanced commands</small></summary>
+      <div class="raw"><div class="line"><input type="text" id="rawMethod" value="miIO.info" placeholder="method">
+      <input type="text" id="rawParams" value="[]" placeholder="params JSON"><button class="btn" data-act="raw">Send</button></div>
+      <pre id="rawOut">—</pre></div></details>`;
+  $("#detail").innerHTML = html;
+  if (S.spec && !isAC()) S.showAll = true;
+  paint();
+}
+function propRow(p) {
+  const w = p.access.includes("write"), r = p.access.includes("read"), id = `g-${p.siid}-${p.piid}`, k = esc(p.key);
+  let ctl = `<span class="val" id="${id}">${r ? "…" : "–"}</span>`;
+  if (w && p.format === "bool") ctl = `<label class="switch"><input type="checkbox" id="${id}" data-key="${k}"><span></span></label>`;
+  else if (w && p.values) ctl = `<select id="${id}" data-key="${k}">` + p.values.map(v => `<option value="${v.value}">${esc(v.description)} (${v.value})</option>`).join("") + `</select>`;
+  else if (w && p.unit === "rgb") ctl = `<input type="color" id="${id}" data-key="${k}">`;
+  else if (w && p.range && p.format !== "string") ctl = `<input type="range" id="${id}" data-key="${k}" min="${p.range[0]}" max="${p.range[1]}" step="${p.range[2] || 1}"><span class="val" id="${id}-n" style="min-width:60px">${r ? "…" : "–"}</span>`;
+  else if (w) ctl = `<input type="text" id="${id}" data-text="1" style="width:160px"><button class="btn" data-act="settext" data-key="${k}" data-for="${id}">Set</button>`;
+  const unit = p.unit && p.unit !== "none" ? ` · ${esc(p.unit)}` : "";
+  return `<div class="row"><div class="k">${esc(p.description || p.key)}<small>${k} · ${p.siid}.${p.piid}${unit}${w ? "" : " · read-only"}</small></div><div class="ctl">${ctl}</div></div>`;
+}
+
+function modeLabel(desc) { return MODE_LABEL[String(desc).toLowerCase()] || desc; }
+function fanLabel(desc) { const m = /(\d+)$/.exec(desc); return m ? m[1] : (String(desc).toLowerCase() === "auto" ? "Auto" : desc); }
+function remoteHTML() {
+  const p = S.props, on = !!val(AC.power), target = val(AC.target), step = p[AC.target].range?.[2] || 0.5;
+  const busyCls = k => S.pending[k] ? " busy" : "";
+  const chip = (key, v, label) => `<button class="chip-btn ${val(key) === v ? "on" : ""}${busyCls(key)}" data-act="set" data-key="${key}" data-val='${JSON.stringify(v)}'>${esc(label)}</button>`;
+  const ro = (key, label, d, unit) => p[key] ? `<div class="ro"><span>${label}</span><b>${fmt(val(key), d)}${unit}</b></div>` : "";
+  const toggles = AC.toggles.filter(([k]) => p[k]?.access.includes("write"))
+    .map(([k, label]) => `<button class="tog ${val(k) ? "on" : ""}${busyCls(k)}" data-act="toggle" data-key="${k}"><i></i>${label}</button>`).join("");
+  return `<section class="card remote ${on ? "is-on" : "is-off"}">
+    <div class="remote-top">
+      <div class="readouts">${ro(AC.room, "Room", 1, "°")}${ro(AC.outdoor, "Outdoor", 1, "°")}${ro(AC.energy, "Total energy", 2, " kWh")}</div>
+      <button class="power${busyCls(AC.power)}" data-act="power" title="On / Off">${POWER_SVG}<span>${on ? "ON" : "OFF"}</span></button>
+    </div>
+    <div class="temp">
+      <button class="round" data-act="temp" data-d="${-step}" title="Lower temperature">−</button>
+      <div class="temp-val${busyCls(AC.target)}"><b>${target === undefined ? "--" : Number(target).toFixed(1)}</b><span>°C</span><small>target</small></div>
+      <button class="round" data-act="temp" data-d="${step}" title="Raise temperature">+</button>
+    </div>
+    ${p[AC.mode]?.values ? `<div class="group"><label>Mode</label><div class="chips">${p[AC.mode].values.map(v => chip(AC.mode, v.value, modeLabel(v.description))).join("")}</div></div>` : ""}
+    ${p[AC.fan]?.values ? `<div class="group"><label>Fan speed</label><div class="chips">${p[AC.fan].values.map(v => chip(AC.fan, v.value, fanLabel(v.description))).join("")}</div></div>` : ""}
+    ${toggles ? `<div class="group"><label>Features</label><div class="toggles">${toggles}</div></div>` : ""}
+  </section>`;
+}
+
+function paint() {
+  if (!S.spec) return;
+  if (isAC() && $("#remote")) $("#remote").innerHTML = remoteHTML();
+  for (const p of Object.values(S.props)) {
+    const v = S.values[p.key]; if (!v) continue;
+    const el = document.getElementById(`g-${p.siid}-${p.piid}`); if (!el || el === document.activeElement) continue;
+    if (v.code !== 0) { if (el.tagName === "SPAN") { el.textContent = `error ${v.code}`; el.className = "val err"; } continue; }
+    if (el.type === "checkbox") el.checked = !!v.value;
+    else if (el.type === "color") el.value = "#" + Number(v.value).toString(16).padStart(6, "0");
+    else if (el.type === "range") { el.value = v.value; const n = document.getElementById(el.id + "-n"); if (n) n.textContent = fmt(v.value, 2) + unitTxt(p); }
+    else if (el.tagName === "SELECT" || el.dataset.text) el.value = v.value;
+    else {
+      const opt = p.values?.find(o => o.value === v.value);
+      el.textContent = opt ? `${opt.description} (${v.value})` : (typeof v.value === "object" ? JSON.stringify(v.value) : fmt(v.value, 2) + unitTxt(p));
+      el.className = "val";
+    }
+  }
+}
+function setVia(r) { const el = $("#lastVia"); if (el) { el.textContent = `${r.via === "local" ? "LAN" : "Cloud"} · ${r.ms} ms`; el.className = "pill ok"; el.title = ""; } }
+
+async function poll(force) {
+  if (!S.cur || !S.spec) return;
+  const did = S.cur.did;
+  if (S.pollingDid === did || (!force && document.hidden)) return;
+  S.pollingDid = did;
+  const keys = isAC() && !S.showAll ? remoteKeys() : null;
+  try {
+    const r = await api(`/api/devices/${enc(did)}/status?via=${S.via}` + (keys ? `&keys=${enc(keys.join(","))}` : ""));
+    if (S.cur?.did !== did) return;
+    for (const v of r.values) if (!S.pending[v.key]) S.values[v.key] = v;
+    setVia(r); paint();
+  } catch (e) {
+    const el = $("#lastVia"); if (el) { el.textContent = "not connected"; el.className = "pill err"; el.title = e.message; }
+    if (force) toast(e.message, true);
+  } finally { if (S.pollingDid === did) S.pollingDid = null; }
+}
+setInterval(() => poll(false), POLL_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(true); });
+
+async function setProp(key, value) {
+  const did = S.cur.did;
+  S.values[key] = { ...(S.values[key] || {}), key, value, code: 0 };  // optimistic
+  S.pending[key] = true; paint();
+  try { const r = await api(`/api/devices/${enc(did)}/set`, { key, value, via: S.via }); setVia(r); }
+  catch (e) { toast(e.message, true); }
+  finally { delete S.pending[key]; paint(); setTimeout(() => poll(true), 800); }
+}
+let tempTimer = null;
+function bumpTemp(delta) {
+  const p = S.props[AC.target], [min, max] = p.range;
+  const cur = Number(val(AC.target) ?? (min + max) / 2);
+  const next = Number(Math.min(max, Math.max(min, cur + delta)).toFixed(2));
+  S.values[AC.target] = { ...(S.values[AC.target] || {}), key: AC.target, value: next, code: 0 };
+  S.pending[AC.target] = true; paint();
+  clearTimeout(tempTimer);  // send once the user stops clicking
+  tempTimer = setTimeout(() => setProp(AC.target, next), 700);
+}
+
+// ------------------------------------------------------------------ events (delegated)
+$("#detail").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, key = b.dataset.key;
+  if (act === "power") setProp(AC.power, !val(AC.power));
+  else if (act === "temp") bumpTemp(Number(b.dataset.d));
+  else if (act === "set") setProp(key, JSON.parse(b.dataset.val));
+  else if (act === "toggle") setProp(key, !val(key));
+  else if (act === "settext") setProp(key, document.getElementById(b.dataset.for).value);
+  else if (act === "via") {
+    S.via = b.dataset.via; store("via", S.via);
+    for (const x of b.parentElement.children) x.classList.toggle("on", x === b);
+    poll(true);
+  }
+  else if (act === "action") busy(b, async () => {
+    const args = [];
+    for (const i of JSON.parse(b.dataset.in)) { const v = prompt(`Value for "${i.name}"`); if (v === null) return; args.push(v === "" || isNaN(v) ? v : Number(v)); }
+    const r = await api(`/api/devices/${enc(S.cur.did)}/action`, { key, args, via: S.via });
+    setVia(r); toast(`${key} OK`); setTimeout(() => poll(true), 800);
+  });
+  else if (act === "raw") busy(b, async () => {
+    let params; try { params = JSON.parse($("#rawParams").value || "[]"); } catch { params = $("#rawParams").value; }
+    const r = await api(`/api/devices/${enc(S.cur.did)}/raw`, { method: $("#rawMethod").value, params, via: S.via });
+    $("#rawOut").textContent = JSON.stringify(r.result, null, 2); setVia(r);
+  });
+});
+$("#detail").addEventListener("change", e => {
+  const el = e.target, key = el.dataset.key; if (!key) return;
+  if (el.type === "checkbox") setProp(key, el.checked);
+  else if (el.tagName === "SELECT") setProp(key, Number(el.value));
+  else if (el.type === "color") setProp(key, parseInt(el.value.slice(1), 16));
+  else if (el.type === "range") setProp(key, Number(el.value));
+});
+$("#detail").addEventListener("input", e => {
+  if (e.target.type !== "range") return;
+  const n = document.getElementById(e.target.id + "-n"); if (n) n.textContent = e.target.value;
+});
+$("#detail").addEventListener("toggle", e => {
+  if (e.target.id !== "allFeatures") return;
+  S.showAll = e.target.open; if (S.showAll) poll(true);
+}, true);
+
+(async () => { try { await loadState(); await loadDevices(); } catch (e) { toast(e.message, true); } })();
+</script>
+</body>
+</html>
